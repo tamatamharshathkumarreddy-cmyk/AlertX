@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>History | AlertX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-link-active { background: rgba(220, 38, 38, 0.1); border-left: 3px solid #dc2626; }
+    </style>
+</head>
+<body class="bg-[#0b0e14] text-white flex h-screen overflow-hidden">
+    <aside class="w-72 glass border-r border-white/5 p-6 flex flex-col justify-between">
+        <div>
+            <div class="font-bold text-xl mb-10 italic">AlertX</div>
+            <nav class="space-y-2">
+                <a href="dashboard.html" class="block p-3 rounded-lg text-gray-500">Dashboard</a>
+                <a href="sos.html" class="block p-3 rounded-lg text-gray-500">Send SOS</a>
+                <a href="map.html" class="block p-3 rounded-lg text-gray-500">Live Map</a>
+                <a href="ai.html" class="block p-3 rounded-lg text-gray-500">AI Assistant</a>
+                <a href="incidents.html" class="block p-3 rounded-lg text-gray-500">Incidents</a>
+                <a href="history.html" class="sidebar-link-active block p-3 rounded-lg">History</a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <h2 class="text-3xl font-black italic uppercase mb-8 text-red-600">Incident Logs</h2>
+        <div class="glass rounded-3xl border border-white/10 overflow-hidden">
+            <table class="w-full text-left">
+                <thead class="bg-white/5 text-[10px] uppercase tracking-widest text-gray-500">
+                    <tr><th class="p-6">Time</th><th class="p-6">Event</th><th class="p-6">Status</th></tr>
+                </thead>
+                <tbody class="text-sm">
+                    <tr class="border-t border-white/5"><td class="p-6">14:20</td><td class="p-6">Medical Support</td><td class="p-6 text-green-500">RESOLVED</td></tr>
+                    <tr class="border-t border-white/5"><td class="p-6">10:05</td><td class="p-6">False Alarm</td><td class="p-6 text-gray-500">DISMISSED</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</body>
+</html>

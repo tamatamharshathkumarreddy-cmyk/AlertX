@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlertX | Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary-red: #dc2626; --glass-bg: rgba(255, 255, 255, 0.03); }
+        body { background: #0b0e14; color: white; font-family: 'Inter', sans-serif; transition: background 0.3s, color 0.3s; }
+        .glass { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-link { transition: all 0.3s; border-left: 3px solid transparent; }
+        .sidebar-link:hover, .sidebar-link-active { background: rgba(220, 38, 38, 0.1); border-left-color: var(--primary-red); color: white; }
+        
+        .sos-btn { position: relative; z-index: 1; transition: transform 0.2s, background-color 0.3s; cursor: pointer; user-select: none; }
+        .sos-btn:active { transform: scale(0.92); }
+        .sos-pulse { position: absolute; border-radius: 50%; background: #dc2626; animation: pulse 2s infinite; z-index: -1; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.6); opacity: 0; } }
+        
+        .shimmer { background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0) 100%); background-size: 200% 100%; animation: shimmer 3s infinite; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        .modal-enter { animation: modalFade 0.3s ease-out; }
+        @keyframes modalFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .emergency-bg { animation: emergencyFlash 1s infinite alternate; }
+        @keyframes emergencyFlash { from { background-color: #7f1d1d; } to { background-color: #dc2626; } }
+
+        body.light-theme { background: #f3f4f6; color: #1f2937; }
+        body.light-theme .glass { background: rgba(255, 255, 255, 0.7); border-color: rgba(0, 0, 0, 0.1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        body.light-theme .sidebar-link { color: #4b5563; }
+        body.light-theme .sidebar-link:hover, body.light-theme .sidebar-link-active { color: #dc2626; background: rgba(220, 38, 38, 0.05); }
+        body.light-theme aside { background: white; border-color: rgba(0,0,0,0.05); }
+    </style>
+</head>
+
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="w-72 glass border-r border-white/5 p-6 flex flex-col justify-between hidden lg:flex">
+        <div>
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/30">
+                    <i class="fas fa-shield-alt text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-tight">AlertX</h1>
+                    <span id="role-badge" class="text-[10px] uppercase tracking-widest px-2 py-0.5 rounded bg-white/10 text-gray-400">Loading...</span>
+                </div>
+            </div>
+
+            <nav class="space-y-1">
+                <a href="dashboard.html" class="sidebar-link sidebar-link-active flex items-center gap-4 p-3 rounded-lg text-white">
+                    <i class="fas fa-th-large w-5"></i> Dashboard
+                </a>
+
+                <!-- ✅ NEW: Live Incidents -->
+                <a href="incidents.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-400">
+                    <i class="fas fa-exclamation-triangle w-5"></i> Live Incidents
+                </a>
+
+                <a href="sos.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-400">
+                    <i class="fas fa-broadcast-tower w-5"></i> Send SOS
+                </a>
+                <a href="map.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-400">
+                    <i class="fas fa-map-marked-alt w-5"></i> Live Map
+                </a>
+                <a href="ai.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-400">
+                    <i class="fas fa-robot w-5"></i> AI Assistant
+                </a>
+
+                <!-- ✅ FIXED: Settings redirect -->
+                <a href="settings.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-400">
+                    <i class="fas fa-cog w-5"></i> Settings
+                </a>
+            </nav>
+        </div>
+
+        <button id="logoutBtn" class="flex items-center gap-4 p-3 text-red-500 hover:bg-red-500/10 rounded-xl transition font-bold">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+    </aside>
+
+    <!-- ❗ Rest of your code is EXACTLY SAME (no changes below) -->
+
+
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 id="user-greeting" class="text-3xl font-black italic uppercase tracking-tight"></h2>
+                <div class="flex items-center gap-4 text-sm text-gray-400 mt-1">
+                    <span id="live-clock"><i class="far fa-clock mr-2"></i></span>
+                    <span class="flex items-center gap-2"><div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div> System Online</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="glass flex items-center gap-3 p-2 pr-4 rounded-2xl border border-white/10">
+                    <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center border border-white/10 text-white">
+                        <i class="fas fa-user text-xs"></i>
+                    </div>
+                    <div class="text-xs">
+                        <p id="user-name-small" class="font-bold"></p>
+                        <p class="text-green-500">Available</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 glass rounded-[2.5rem] p-8 relative overflow-hidden flex flex-col md:flex-row items-center justify-between border border-red-600/20">
+                <div class="shimmer absolute inset-0 opacity-20 pointer-events-none"></div>
+                <div class="text-center md:text-left mb-8 md:mb-0">
+                    <h3 class="text-2xl font-black uppercase text-red-500 mb-2">Emergency SOS</h3>
+                    <p class="text-gray-400 max-w-xs mb-6">Hold to instantly alert responders to your exact coordinates.</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-red-600/20 text-red-500 px-3 py-1 rounded-full text-xs font-bold border border-red-600/30">Panic Mode</span>
+                        <span class="bg-white/5 text-gray-400 px-3 py-1 rounded-full text-xs border border-white/10 italic">Hold 2s to trigger</span>
+                    </div>
+                </div>
+
+                <div class="relative flex items-center justify-center w-56 h-56">
+                    <div class="sos-pulse w-full h-full"></div>
+                    <button id="mainSosBtn" class="sos-btn w-44 h-44 rounded-full bg-red-600 flex flex-col items-center justify-center shadow-2xl shadow-red-600/50 border-4 border-red-500/50 text-white">
+                        <span class="text-4xl font-black italic tracking-tighter">SOS</span>
+                        <span class="text-[10px] font-bold uppercase opacity-80 mt-1">Hold Now</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass rounded-3xl p-6 border border-white/10">
+                    <p class="text-xs text-gray-500 uppercase font-bold tracking-widest mb-1">Live Location</p>
+                    <p id="loc-text" class="text-sm font-bold truncate">Main Campus, Block C</p>
+                    <p id="gps-text" class="text-[10px] text-gray-500 mt-1 font-mono italic">Waiting for GPS...</p>
+                </div>
+                <div class="glass rounded-3xl p-6 border border-white/10 bg-gradient-to-br from-purple-600/10 to-transparent">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center animate-bounce text-white">
+                            <i class="fas fa-microphone"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold">Voice SOS Active</p>
+                            <p class="text-[10px] text-gray-400 italic">"Hey AlertX, Help me!"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h4 class="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Quick Alert Categories</h4>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <button onclick="openIncidentPopup('Fire')" class="glass p-6 rounded-3xl border-b-4 border-orange-600 hover:bg-white/5 transition group">
+                    <div class="text-3xl mb-3 group-hover:scale-110 transition">🔥</div>
+                    <div class="text-xs font-bold uppercase">Fire</div>
+                </button>
+                <button onclick="openIncidentPopup('Medical')" class="glass p-6 rounded-3xl border-b-4 border-red-600 hover:bg-white/5 transition group">
+                    <div class="text-3xl mb-3 group-hover:scale-110 transition">❤️</div>
+                    <div class="text-xs font-bold uppercase">Medical</div>
+                </button>
+                <button onclick="openIncidentPopup('Security')" class="glass p-6 rounded-3xl border-b-4 border-blue-600 hover:bg-white/5 transition group">
+                    <div class="text-3xl mb-3 group-hover:scale-110 transition">🛡️</div>
+                    <div class="text-xs font-bold uppercase">Security</div>
+                </button>
+                <button onclick="openIncidentPopup('Harassment')" class="glass p-6 rounded-3xl border-b-4 border-yellow-500 hover:bg-white/5 transition group">
+                    <div class="text-3xl mb-3 group-hover:scale-110 transition">⚠️</div>
+                    <div class="text-xs font-bold uppercase">Harassment</div>
+                </button>
+                <button onclick="openIncidentPopup('Theft')" class="glass p-6 rounded-3xl border-b-4 border-purple-600 hover:bg-white/5 transition group">
+                    <div class="text-3xl mb-3 group-hover:scale-110 transition">🎒</div>
+                    <div class="text-xs font-bold uppercase">Theft</div>
+                </button>
+                <button onclick="openIncidentPopup('Other')" class="glass p-6 rounded-3xl border-b-4 border-gray-600 hover:bg-white/5 transition group">
+                    <div class="text-3xl mb-3 group-hover:scale-110 transition">➕</div>
+                    <div class="text-xs font-bold uppercase">Other</div>
+                </button>
+            </div>
+        </section>
+
+        <section id="stats-container" class="grid grid-cols-2 lg:grid-cols-4 gap-6"></section>
+        <!-- ================= ADMIN PANEL ================= -->
+<div id="adminPanel" class="hidden glass rounded-3xl p-6 border border-yellow-500/20">
+    <h3 class="text-xl font-black mb-4 text-yellow-400">Admin Analytics</h3>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="p-4 bg-white/5 rounded-xl">
+            <p class="text-xs text-gray-400">Total Incidents</p>
+            <p id="totalIncidents" class="text-2xl font-bold">0</p>
+        </div>
+        <div class="p-4 bg-white/5 rounded-xl">
+            <p class="text-xs text-gray-400">Fire Cases</p>
+            <p id="fireCount" class="text-2xl font-bold text-red-500">0</p>
+        </div>
+        <div class="p-4 bg-white/5 rounded-xl">
+            <p class="text-xs text-gray-400">Medical</p>
+            <p id="medicalCount" class="text-2xl font-bold text-pink-500">0</p>
+        </div>
+        <div class="p-4 bg-white/5 rounded-xl">
+            <p class="text-xs text-gray-400">Security</p>
+            <p id="securityCount" class="text-2xl font-bold text-blue-500">0</p>
+        </div>
+    </div>
+
+    <!-- Commands -->
+    <h4 class="text-sm font-bold mb-2">Send Command</h4>
+    <div class="flex gap-2">
+        <input id="adminCommand" placeholder="Enter command..." class="flex-1 p-2 rounded bg-black/40 border border-white/10 text-sm"/>
+        <button onclick="sendCommand()" class="bg-yellow-500 px-4 rounded font-bold">Send</button>
+    </div>
+
+    <div id="commandLog" class="mt-4 text-xs text-gray-400"></div>
+</div>
+<!-- ================= CONTACT + ADDRESS ================= -->
+<section class="glass rounded-3xl p-6 border border-white/10">
+    <h3 class="text-lg font-black text-red-500 mb-4">📞 Emergency Contacts</h3>
+
+    <div class="grid md:grid-cols-2 gap-6 text-sm">
+
+        <!-- Contact -->
+        <div>
+            <p class="font-bold mb-2">Contacts</p>
+            <p>🚓 Police: <a href="tel:100" class="text-blue-400">100</a></p>
+            <p>🚑 Ambulance: <a href="tel:102" class="text-red-400">102</a></p>
+            <p>🔥 Fire: <a href="tel:101" class="text-orange-400">101</a></p>
+            <p>📱 Admin: <a href="tel:+919876543210" class="text-green-400">+91 98765 43210</a></p>
+        </div>
+
+        <!-- Address -->
+        <div>
+            <p class="font-bold mb-2">📍 Address</p>
+            <p>Main Campus, Block C</p>
+            <p>AlertX Control Center</p>
+            <p>Hyderabad, India</p>
+            <p class="text-xs text-gray-400 mt-2">GPS auto-detected during SOS</p>
+        </div>
+
+    </div>
+</section>
+    </main>
+
+    <div id="incidentModal" class="fixed inset-0 z-[100] hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass modal-enter w-full max-w-lg rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
+            <div id="modalHeader" class="p-6 text-center border-b border-white/5">
+                <h3 id="modalTitle" class="text-2xl font-black uppercase italic tracking-tighter"></h3>
+                <p id="modalPriority" class="text-[10px] font-bold mt-1 px-3 py-1 rounded-full inline-block text-white"></p>
+            </div>
+            <div class="p-6 space-y-6">
+                <p class="text-xs font-bold text-gray-500 uppercase mb-3">Select Specific Type</p>
+                <div id="modalOptions" class="grid grid-cols-2 gap-2"></div>
+                <div id="extraActions" class="grid grid-cols-2 gap-3 pt-4 border-t border-white/5"></div>
+            </div>
+            <div class="p-4 bg-white/5 flex gap-3">
+                <button onclick="closeModal()" class="flex-1 py-3 rounded-xl font-bold text-gray-400 hover:bg-white/5 transition">Cancel</button>
+                <button id="finalSubmit" onclick="triggerCategorizedSOS()" class="flex-[2] py-3 rounded-xl font-black uppercase tracking-widest text-white shadow-lg transition">Confirm Alert</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="activeSOSOverlay" class="fixed inset-0 z-[200] hidden emergency-bg flex flex-col items-center justify-center text-center p-6 text-white">
+        <div class="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 shadow-2xl text-red-600">
+            <i class="fas fa-shield-alt text-5xl"></i>
+        </div>
+        <h2 class="text-5xl font-black italic uppercase mb-2">SOS ACTIVE</h2>
+        <p id="activeType" class="text-xl font-bold opacity-90 mb-8">GENERAL EMERGENCY DISPATCHED</p>
+        <div class="glass p-6 rounded-3xl mb-8 max-w-sm w-full border-white/20">
+            <p class="text-xs uppercase font-bold opacity-60 mb-2 tracking-widest">Responders Tracking You</p>
+            <p id="activeGPS" class="font-mono text-lg">---.---- , ---.----</p>
+            <p class="text-sm mt-4 font-bold">Help is en route to your position. Stay where you are if safe.</p>
+        </div>
+        <button onclick="deactivateSOS()" class="px-10 py-4 bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl font-black uppercase tracking-widest hover:bg-white hover:text-black transition">
+            Cancel Alert
+        </button>
+    </div>
+
+    <script>
+    // --- Sound Configuration ---
+    // Using high-pitched, urgent tones for emergency feedback
+    const holdSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'); // Ticking sound
+    const alertSiren = new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'); // Emergency Siren
+
+    holdSound.loop = true;
+    alertSiren.loop = true;
+
+    const incidentConfig = {
+        'Fire': { priority: '🔴 Critical', color: 'bg-red-600', options: ['Smoke detected', 'Electrical fire', 'Gas leak'], extras: [{ icon: 'fa-camera', label: 'Photo' }] },
+        'Medical': { priority: '🔴 Critical', color: 'bg-red-500', options: ['Chest pain', 'Bleeding', 'Injury'], extras: [{ icon: 'fa-ambulance', label: 'EMS' }] },
+        'Security': { priority: '🔴 High', color: 'bg-blue-600', options: ['Fight', 'Suspicious person', 'Intruder'], extras: [{ icon: 'fa-volume-mute', label: 'Silent' }] },
+        'Harassment': { priority: '🟠 High', color: 'bg-yellow-500', options: ['Verbal', 'Stalking'], extras: [{ icon: 'fa-microphone', label: 'Record' }] },
+        'Theft': { priority: '🟡 Medium', color: 'bg-purple-600', options: ['Lost item', 'Room theft'], extras: [{ icon: 'fa-video', label: 'CCTV' }] },
+        'Other': { priority: 'AI Evaluating...', color: 'bg-gray-600', options: ['Accident', 'Flooding'], extras: [{ icon: 'fa-keyboard', label: 'Type' }] }
+    };
+
+    let sosTimer;
+    const mainSosBtn = document.getElementById('mainSosBtn');
+
+    // 1. Geolocation Logic
+    function updateGPSInfo() {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const { latitude, longitude } = pos.coords;
+                document.getElementById('gps-text').innerText = `GPS: ${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`;
+                document.getElementById('activeGPS').innerText = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            });
+        }
+    }
+    function handleRoles() {
+    const role = localStorage.getItem("userRole");
+
+    if (role === "Admin") {
+        document.getElementById("adminPanel").classList.remove("hidden");
+    }
+}
+
+    // 2. SOS Trigger & UI Escalation
+    function activateSOS(type = "GENERAL EMERGENCY") {
+
+    holdSound.pause();
+    holdSound.currentTime = 0;
+    alertSiren.play().catch(e => {});
+
+    document.getElementById('activeType').innerText = `${type.toUpperCase()} DISPATCHED`;
+    document.getElementById('activeSOSOverlay').classList.remove('hidden');
+
+    updateGPSInfo();
+
+    // ✅ SAVE INCIDENT
+    saveIncident(type);
+}
+
+    function deactivateSOS() {
+        alertSiren.pause();
+        alertSiren.currentTime = 0;
+        document.getElementById('activeSOSOverlay').classList.add('hidden');
+    }
+
+    function triggerCategorizedSOS() {
+    const type = document.getElementById('modalTitle').innerText;
+
+    saveIncident(type); // ✅ ADD THIS
+    activateSOS(type);
+
+    closeModal();
+}
+function loadAnalytics() {
+    const incidents = JSON.parse(localStorage.getItem("incidents")) || [];
+
+    document.getElementById("totalIncidents").innerText = incidents.length;
+
+    let fire = 0, medical = 0, security = 0;
+
+    incidents.forEach(i => {
+        if (i.type === "Fire") fire++;
+        if (i.type === "Medical") medical++;
+        if (i.type === "Security") security++;
+    });
+
+    document.getElementById("fireCount").innerText = fire;
+    document.getElementById("medicalCount").innerText = medical;
+    document.getElementById("securityCount").innerText = security;
+}
+function sendCommand() {
+    const cmd = document.getElementById("adminCommand").value;
+
+    if (!cmd) return;
+
+    let commands = JSON.parse(localStorage.getItem("commands")) || [];
+
+    const newCmd = {
+        text: cmd,
+        sender: localStorage.getItem("userRole"),
+        time: new Date().toLocaleTimeString()
+    };
+
+    commands.push(newCmd);
+    localStorage.setItem("commands", JSON.stringify(commands));
+
+    document.getElementById("adminCommand").value = "";
+    loadCommands();
+}
+
+function loadCommands() {
+    const role = localStorage.getItem("userRole");
+    const commands = JSON.parse(localStorage.getItem("commands")) || [];
+
+    let filtered = [];
+
+    if (role === "Admin") filtered = commands;
+    if (role === "Staff") filtered = commands.filter(c => c.sender === "Admin");
+    if (role === "Guest") filtered = commands.filter(c => c.sender === "Staff");
+
+    document.getElementById("commandLog").innerHTML = filtered.map(c => `
+        <div class="p-2 border-b border-white/5">
+            <b>${c.sender}</b>: ${c.text} 
+            <span class="text-gray-500">(${c.time})</span>
+        </div>
+    `).join("");
+}
+
+    // 3. Interaction (Hold to trigger)
+    mainSosBtn.addEventListener('mousedown', () => {
+        // Start playing the charge/ticking sound
+        holdSound.play().catch(e => console.log("Audio blocked"));
+        
+        sosTimer = setTimeout(() => {
+            activateSOS();
+        }, 1500); // 1.5s Hold
+    });
+
+    mainSosBtn.addEventListener('mouseup', () => {
+        clearTimeout(sosTimer);
+        holdSound.pause();
+        holdSound.currentTime = 0;
+    });
+
+    mainSosBtn.addEventListener('mouseleave', () => {
+        clearTimeout(sosTimer);
+        holdSound.pause();
+        holdSound.currentTime = 0;
+    });
+
+    // Touch support for mobile devices
+    mainSosBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        holdSound.play().catch(e => {});
+        sosTimer = setTimeout(() => {
+            activateSOS();
+        }, 1500);
+    });
+
+    mainSosBtn.addEventListener('touchend', () => {
+        clearTimeout(sosTimer);
+        holdSound.pause();
+        holdSound.currentTime = 0;
+    });
+
+    // --- UI Functions ---
+    function openIncidentPopup(type) {
+        const config = incidentConfig[type];
+        document.getElementById('modalTitle').innerText = `${type}`;
+        document.getElementById('modalPriority').innerText = config.priority;
+        document.getElementById('modalOptions').innerHTML = config.options.map(opt => `
+            <button class="text-left p-4 rounded-2xl bg-white/5 border border-white/5 text-[11px] font-bold hover:bg-white/10 transition">${opt}</button>
+        `).join('');
+        document.getElementById('incidentModal').classList.remove('hidden');
+    }
+    function saveIncident(type) {
+    let incidents = JSON.parse(localStorage.getItem("incidents")) || [];
+
+    const newIncident = {
+        id: Date.now(),
+        type: type,
+        zone: "Zone A",
+        reporter: localStorage.getItem("userName") || "User",
+        status: "Active",
+        time: new Date().toLocaleTimeString()
+    };
+
+    incidents.push(newIncident);
+    localStorage.setItem("incidents", JSON.stringify(incidents));
+
+    loadAnalytics(); // ✅ ADD THIS
+
+    if (Notification.permission === "granted") {
+        new Notification("🚨 New Incident Created", {
+            body: `${type} reported`,
+            icon: "https://cdn-icons-png.flaticon.com/512/1828/1828843.png"
+        });
+    }
+}
+    // ================= GUEST ID AUTO GENERATOR =================
+(function () {
+    let role = localStorage.getItem("userRole");
+    let name = localStorage.getItem("userName");
+
+    function generateGuestID() {
+        return "Guest-" + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    if (role === "Guest") {
+        if (!name || !name.startsWith("Guest-")) {
+            name = generateGuestID();
+            localStorage.setItem("userName", name);
+        }
+    }
+})();
+    function closeModal() { document.getElementById('incidentModal').classList.add('hidden'); }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const userName = localStorage.getItem('userName') || 'Harshath Kumar Reddy';
+        const userRole = localStorage.getItem('userRole') || 'Editor';
+        handleRoles();
+        loadAnalytics();
+        loadCommands();
+        document.getElementById('user-greeting').innerText = `Welcome, ${userName} 👋`;
+        document.getElementById('user-name-small').innerText = userName;
+        document.getElementById('role-badge').innerText = userRole;
+        if ("Notification" in window && Notification.permission !== "granted") {
+         Notification.requestPermission();
+        }
+
+        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
+
+        setInterval(() => {
+            document.getElementById('live-clock').innerHTML = `<i class="far fa-clock mr-2"></i> ${new Date().toLocaleTimeString()}`;
+        }, 1000);
+
+        // Stats UI
+        document.getElementById('stats-container').innerHTML = `
+            <div class="glass p-6 rounded-3xl border-l-4 border-green-500"><p class="text-xs font-bold text-gray-500">Status</p><p class="text-2xl font-black">Secure</p></div>
+            <div class="glass p-6 rounded-3xl border-l-4 border-blue-600"><p class="text-xs font-bold text-gray-500">Nearby Staff</p><p class="text-2xl font-black">06</p></div>
+            <div class="glass p-6 rounded-3xl border-l-4 border-red-500"><p class="text-xs font-bold text-gray-500">Avg Response</p><p class="text-2xl font-black">2.4m</p></div>
+            <div class="glass p-6 rounded-3xl border-l-4 border-gray-600"><p class="text-xs font-bold text-gray-500">Signal</p><p class="text-2xl font-black">Strong</p></div>
+        `;
+        // ================= ROLE BADGE COLOR =================
+     const role = localStorage.getItem("userRole");
+     const badge = document.getElementById("role-badge");
+
+     if (role === "Admin") {
+         badge.classList.add("bg-yellow-500/20","text-yellow-400");
+    }
+    else if (role === "Staff") {
+         badge.classList.add("bg-blue-500/20","text-blue-400");
+    }
+    else if (role === "Guest") {
+        badge.classList.add("bg-gray-500/20","text-gray-300");
+    }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.href = 'login.html';
+    });
+</script>
+</body>
+</html>

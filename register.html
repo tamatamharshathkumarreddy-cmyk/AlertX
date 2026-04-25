@@ -1,0 +1,129 @@
+<!DOCTYPE html>  
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | AlertX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        select option { background: #1a1d23; color: white; }
+        .bg-animate {
+            background: radial-gradient(circle at top right, rgba(220, 38, 38, 0.15), transparent);
+        }
+    </style>
+</head>
+
+<body class="bg-[#0b0e14] text-white flex items-center justify-center min-h-screen p-4 overflow-hidden bg-animate font-sans">
+
+    <div class="w-full max-w-6xl grid md:grid-cols-2 gap-12 items-center relative z-10">
+        
+        <!-- LEFT SIDE -->
+        <div class="hidden md:block space-y-8 p-6">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(220,38,38,0.6)]">
+                    <span class="text-3xl font-black">A</span>
+                </div>
+                <h1 class="text-5xl font-black tracking-tighter uppercase italic">AlertX</h1>
+            </div>
+            
+            <h2 class="text-4xl font-bold leading-tight">
+                Empowering <span class="text-red-600">Hospitality</span> Safety with AI.
+            </h2>
+            <p class="text-gray-400 text-lg">
+                Create your account to access the system securely.
+            </p>
+        </div>
+
+        <!-- REGISTER FORM -->
+        <div class="glass p-8 md:p-12 rounded-[3rem] border border-white/10 shadow-2xl backdrop-blur-2xl">
+            <div class="text-center mb-8">
+                <h3 class="text-3xl font-black mb-2">Create Account</h3>
+                <p class="text-gray-500 text-sm italic">Access granted only to authorized personnel</p>
+            </div>
+
+            <!-- ✅ SUCCESS MESSAGE -->
+            <p id="successMsg" class="hidden text-green-500 text-center font-bold mb-4">
+                Registration Successful! Redirecting...
+            </p>
+            
+            <form id="registerForm" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="regName" required
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none"
+                        placeholder="Full Name">
+
+                    <select id="regRole" required
+                        class="w-full bg-[#1a1d23] border border-white/10 rounded-xl px-4 py-3.5">
+                        <option value="" disabled selected>Select Role</option>
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                
+                <input type="email" id="regEmail" required
+                    class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5"
+                    placeholder="Email Address">
+                
+                <input type="password" id="regPass" required
+                    class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5"
+                    placeholder="Password">
+
+                <button type="submit"
+                    class="w-full bg-gradient-to-r from-red-600 to-red-800 py-4 rounded-2xl font-black">
+                    Register Securely
+                </button>
+            </form>
+
+            <p class="text-center mt-8 text-sm text-gray-500">
+                Already registered?
+                <a href="login.html" class="text-red-500 font-black">LOG IN HERE</a>
+            </p>
+        </div>
+    </div>
+
+<script type="module">
+import { auth, db } from './firebase-config.js';
+import { createUserWithEmailAndPassword, signOut } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { doc, setDoc } 
+from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const email = regEmail.value;
+    const password = regPass.value;
+    const name = regName.value;
+    const role = regRole.value;
+
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+            name, role, email
+        });
+
+        await signOut(auth);
+
+        // ✅ Show success message (no popup)
+        document.getElementById("successMsg").classList.remove("hidden");
+
+        // ✅ Auto redirect
+        setTimeout(() => {
+            window.location.href = "login.html";
+        }, 1500);
+
+    } catch (err) {
+        alert(err.message);
+    }
+});
+</script>
+
+</body>
+</html>

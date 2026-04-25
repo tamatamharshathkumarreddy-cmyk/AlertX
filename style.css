@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+body { font-family: 'Inter', sans-serif; }
+
+.glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-red-glow {
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.15);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.sos-button {
+    background: radial-gradient(circle, #ff4d4d 0%, #b30000 100%);
+    box-shadow: 0 0 50px rgba(255, 0, 0, 0.4);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.sos-button:active { transform: scale(0.9); }
+
+.sidebar-link-active {
+    background: linear-gradient(90deg, rgba(220, 38, 38, 0.2) 0%, transparent 100%);
+    border-left: 4px solid #dc2626;
+}

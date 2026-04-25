@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Live Map | AlertX</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+.glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,0.08); }
+.sidebar-link-active { background: rgba(220,38,38,0.1); border-left:3px solid #dc2626; }
+#map { height: 420px; border-radius: 20px; }
+</style>
+</head>
+
+<body class="bg-[#0b0e14] text-white flex h-screen overflow-hidden">
+
+<!-- Sidebar -->
+<aside class="w-72 glass border-r border-white/5 p-6">
+    <div class="font-bold text-xl mb-10 italic">AlertX</div>
+    <a href="dashboard.html" class="block p-3 text-gray-500">Dashboard</a>
+    <a href="map.html" class="sidebar-link-active block p-3 rounded-lg">Live Map</a>
+</aside>
+
+<!-- Main -->
+<main class="flex-1 p-6 overflow-y-auto">
+
+<h2 class="text-3xl font-black text-red-600 mb-4">Live Incident Map</h2>
+
+<div id="map" class="mb-6"></div>
+
+<div class="glass p-6 rounded-3xl">
+    <h3 class="text-xl font-bold mb-3">Incident Details</h3>
+    <div id="incidentDetails" class="text-sm text-gray-400">
+        Click marker to view details
+    </div>
+    <div id="extraInfo" class="mt-4 text-sm"></div>
+</div>
+
+</main>
+
+<script>
+
+let map;
+let userLat, userLng;
+let routeLayer;
+
+// 📍 INIT MAP
+navigator.geolocation.getCurrentPosition(pos => {
+
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+
+    map = L.map('map').setView([userLat, userLng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // User marker
+    L.marker([userLat, userLng])
+        .addTo(map)
+        .bindPopup("📍 You are here")
+        .openPopup();
+
+    loadIncidents();
+});
+
+// 📊 LOAD INCIDENTS
+function loadIncidents() {
+
+    let incidents = JSON.parse(localStorage.getItem("incidents")) || [];
+
+    incidents.forEach((inc, index) => {
+
+        let lat = userLat + (Math.random() - 0.5) * 0.01;
+        let lng = userLng + (Math.random() - 0.5) * 0.01;
+
+        let marker = L.marker([lat, lng]).addTo(map);
+
+        marker.on("click", () => showDetails(inc, lat, lng, index));
+    });
+}
+
+// 📏 DISTANCE
+function getDistance(lat1, lon1, lat2, lon2) {
+
+    let R = 6371;
+    let dLat = (lat2-lat1) * Math.PI/180;
+    let dLon = (lon2-lon1) * Math.PI/180;
+
+    let a = Math.sin(dLat/2)**2 +
+        Math.cos(lat1*Math.PI/180) *
+        Math.cos(lat2*Math.PI/180) *
+        Math.sin(dLon/2)**2;
+
+    let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return (R*c).toFixed(2);
+}
+
+// 📍 SHOW DETAILS
+function showDetails(inc, lat, lng, index) {
+
+    let distance = getDistance(userLat, userLng, lat, lng);
+
+    document.getElementById("incidentDetails").innerHTML = `
+        <b>Type:</b> ${inc.type}<br>
+        <b>Status:</b> ${inc.status}<br>
+        <b>Reporter:</b> ${inc.reporter}
+    `;
+
+    document.getElementById("extraInfo").innerHTML = `
+        📏 Distance: <b>${distance} KM</b><br><br>
+
+        <button onclick="resolveIncident(${index})"
+        class="bg-green-600 px-4 py-2 rounded text-xs font-bold">
+        Resolve
+        </button>
+
+        <button onclick="drawRoute(${lat},${lng})"
+        class="bg-blue-600 px-4 py-2 rounded text-xs font-bold ml-2">
+        Route
+        </button>
+    `;
+}
+
+// 🛣️ ROUTE USING OSRM (FREE)
+function drawRoute(lat, lng) {
+
+    if (routeLayer) map.removeLayer(routeLayer);
+
+    fetch(`https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=full&geometries=geojson`)
+    .then(res => res.json())
+    .then(data => {
+
+        let route = data.routes[0].geometry;
+
+        routeLayer = L.geoJSON(route, {
+            style: { color: 'red', weight: 4 }
+        }).addTo(map);
+
+        map.fitBounds(routeLayer.getBounds());
+    });
+}
+
+// ✅ RESOLVE
+function resolveIncident(index) {
+
+    let incidents = JSON.parse(localStorage.getItem("incidents")) || [];
+
+    incidents[index].status = "Resolved";
+
+    localStorage.setItem("incidents", JSON.stringify(incidents));
+
+    alert("✅ Incident resolved");
+}
+
+</script>
+
+</body>
+</html>

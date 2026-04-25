@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send SOS | AlertX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-link { border-left: 3px solid transparent; transition: all 0.3s; }
+        .sidebar-link:hover { background: rgba(255, 255, 255, 0.05); }
+        .sidebar-link-active { background: rgba(220, 38, 38, 0.1); border-left-color: #dc2626; color: white !important; }
+        .sos-btn { animation: pulse 2s infinite; transition: transform 0.2s; }
+        .sos-btn:active { transform: scale(0.9); }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); } 70% { box-shadow: 0 0 0 40px rgba(220, 38, 38, 0); } 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); } }
+    </style>
+</head>
+<body class="bg-[#0b0e14] text-white flex h-screen overflow-hidden font-sans">
+
+    <aside class="w-72 glass border-r border-white/5 p-6 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-8 h-8 bg-red-600 rounded flex items-center justify-center font-bold">A</div>
+                <span class="text-xl font-bold">AlertX</span>
+            </div>
+            <nav class="space-y-2">
+                <a href="dashboard.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <a href="sos.html" class="sidebar-link-active sidebar-link flex items-center gap-4 p-3 rounded-lg text-white">
+                    <i class="fas fa-broadcast-tower"></i> Send SOS
+                </a>
+                <a href="map.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-map-marked-alt"></i> Live Map
+                </a>
+                <a href="ai.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-robot"></i> AI Assistant
+                </a>
+                <a href="incidents.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-tasks"></i> Incidents
+                </a>
+                <a href="history.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-history"></i> History
+                </a>
+            </nav>
+        </div>
+        <button id="logoutBtn" class="text-red-500 text-left p-3 hover:bg-red-500/10 rounded-xl transition">Logout</button>
+    </aside>
+
+    <main class="flex-1 p-8 flex flex-col items-center justify-center text-center">
+        <h2 class="text-4xl font-black italic uppercase tracking-tighter text-red-600 mb-2">Emergency Hub</h2>
+        <p class="text-gray-400 mb-12">Press and hold to broadcast your location to all responders.</p>
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16 w-full max-w-2xl">
+            <button class="glass p-6 rounded-3xl border border-white/10 hover:border-orange-500 transition">
+                <span class="text-3xl block mb-2">🔥</span><span class="text-[10px] font-bold uppercase">Fire</span>
+            </button>
+            <button class="glass p-6 rounded-3xl border border-white/10 hover:border-red-500 transition">
+                <span class="text-3xl block mb-2">❤️</span><span class="text-[10px] font-bold uppercase">Medical</span>
+            </button>
+            <button class="glass p-6 rounded-3xl border border-white/10 hover:border-blue-500 transition">
+                <span class="text-3xl block mb-2">🛡️</span><span class="text-[10px] font-bold uppercase">Security</span>
+            </button>
+            <button class="glass p-6 rounded-3xl border border-white/10 hover:border-purple-500 transition">
+                <span class="text-3xl block mb-2">🎒</span><span class="text-[10px] font-bold uppercase">Theft</span>
+            </button>
+        </div>
+
+        <button class="sos-btn w-64 h-64 rounded-full bg-red-600 text-5xl font-black italic shadow-2xl border-8 border-red-500/50">SOS</button>
+        <p class="mt-8 text-gray-500 animate-pulse uppercase tracking-widest text-xs">System Ready</p>
+    </main>
+    <script>
+const holdSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
+const alertSiren = new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3');
+
+holdSound.loop = true;
+alertSiren.loop = true;
+
+let sosTimer;
+let selectedType = "GENERAL";
+
+// ================= CATEGORY SELECT =================
+document.querySelectorAll(".grid button").forEach(btn => {
+    btn.addEventListener("click", () => {
+        selectedType = btn.innerText.trim();
+        document.querySelectorAll(".grid button").forEach(b => b.classList.remove("border-red-500"));
+        btn.classList.add("border-red-500");
+    });
+});
+
+// ================= GPS =================
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+            localStorage.setItem("gps", JSON.stringify({
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+            }));
+        });
+    }
+}
+
+// ================= SAVE INCIDENT =================
+function saveIncident(type) {
+    let incidents = JSON.parse(localStorage.getItem("incidents")) || [];
+
+    incidents.push({
+        id: Date.now(),
+        type: type,
+        reporter: localStorage.getItem("userName") || "User",
+        status: "Active",
+        time: new Date().toLocaleTimeString()
+    });
+
+    localStorage.setItem("incidents", JSON.stringify(incidents));
+
+    if (Notification.permission === "granted") {
+        new Notification("🚨 SOS Triggered", {
+            body: type + " emergency reported"
+        });
+    }
+}
+
+// ================= SOS ACTIVATE =================
+function activateSOS() {
+    holdSound.pause();
+    holdSound.currentTime = 0;
+
+    alertSiren.play().catch(()=>{});
+
+    getLocation();
+    saveIncident(selectedType);
+
+    alert("🚨 SOS SENT: " + selectedType);
+}
+
+// ================= HOLD BUTTON =================
+const sosBtn = document.querySelector(".sos-btn");
+
+sosBtn.addEventListener("mousedown", () => {
+    holdSound.play().catch(()=>{});
+    sosTimer = setTimeout(() => {
+        activateSOS();
+    }, 1500);
+});
+
+sosBtn.addEventListener("mouseup", () => {
+    clearTimeout(sosTimer);
+    holdSound.pause();
+    holdSound.currentTime = 0;
+});
+
+sosBtn.addEventListener("mouseleave", () => {
+    clearTimeout(sosTimer);
+    holdSound.pause();
+    holdSound.currentTime = 0;
+});
+
+// ================= MOBILE SUPPORT =================
+sosBtn.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    holdSound.play().catch(()=>{});
+    sosTimer = setTimeout(() => {
+        activateSOS();
+    }, 1500);
+});
+
+sosBtn.addEventListener("touchend", () => {
+    clearTimeout(sosTimer);
+    holdSound.pause();
+    holdSound.currentTime = 0;
+});
+
+// ================= INIT =================
+document.addEventListener("DOMContentLoaded", () => {
+    if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
+});
+
+// ================= LOGOUT =================
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.clear();
+    window.location.href = 'login.html';
+});
+</script>
+</body>
+</html>

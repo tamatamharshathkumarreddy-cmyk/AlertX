@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Assistant | AlertX</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary-red: #dc2626; --glass-bg: rgba(255, 255, 255, 0.03); }
+        body { background: #0b0e14; color: white; font-family: 'Inter', sans-serif; transition: background 0.3s; }
+        .glass { background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .sidebar-link { border-left: 3px solid transparent; transition: all 0.3s; }
+        .sidebar-link-active { background: rgba(220, 38, 38, 0.1); border-left-color: var(--primary-red); color: white !important; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        
+        /* Light Mode Styling */
+        body.light-theme { background: #f3f4f6; color: #1f2937; }
+        body.light-theme .glass { background: rgba(255, 255, 255, 0.7); border-color: rgba(0, 0, 0, 0.1); }
+        body.light-theme .text-gray-500 { color: #6b7280; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside class="w-72 glass border-r border-white/5 p-6 flex flex-col justify-between hidden lg:flex">
+        <div>
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-600/30">
+                    <i class="fas fa-shield-alt text-xl"></i>
+                </div>
+                <h1 class="text-xl font-black tracking-tight">AlertX</h1>
+            </div>
+            <nav class="space-y-2">
+                <a href="dashboard.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-th-large w-5"></i> Dashboard
+                </a>
+                <a href="sos.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-broadcast-tower w-5"></i> Send SOS
+                </a>
+                <a href="map.html" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-map-marked-alt w-5"></i> Live Map
+                </a>
+                <a href="ai.html" class="sidebar-link-active sidebar-link flex items-center gap-4 p-3 rounded-lg">
+                    <i class="fas fa-robot w-5"></i> AI Assistant
+                </a>
+                <a href="#" onclick="alert('Settings feature coming soon')" class="sidebar-link flex items-center gap-4 p-3 rounded-lg text-gray-500">
+                    <i class="fas fa-cog w-5"></i> Settings
+                </a>
+            </nav>
+        </div>
+        <button onclick="location.href='login.html'" class="text-red-500 p-3 text-left font-bold hover:bg-red-500/10 rounded-xl transition">
+            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+        </button>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-8 flex flex-col">
+        <header class="mb-8">
+            <h2 class="text-3xl font-black italic uppercase tracking-tighter text-red-600">AI Safety Assistant</h2>
+            <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Powered by Gemini AI</p>
+        </header>
+
+        <div id="chat-window" class="flex-1 glass rounded-[2.5rem] p-6 overflow-y-auto mb-6 space-y-4">
+            <div class="flex gap-4">
+                <div class="w-10 h-10 bg-red-600 rounded-xl flex-shrink-0 flex items-center justify-center font-bold shadow-lg shadow-red-600/20">AI</div>
+                <div class="bg-white/5 p-4 rounded-2xl max-w-[80%] border border-white/5 text-sm leading-relaxed">
+                    Hello! I'm your Gemini-powered safety assistant. I can help with first aid steps, emergency procedures, or campus safety protocols. How can I help?
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-4">
+            <input type="text" id="user-input" placeholder="Ask about safety, fire exits, or first aid..." 
+                   class="flex-1 glass rounded-2xl px-6 py-4 outline-none focus:border-red-600 border border-white/10 transition-all">
+            <button id="send-btn" class="bg-red-600 px-8 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-red-700 transition-colors shadow-lg shadow-red-600/30">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </main>
+
+    <script type="importmap">
+        {
+          "imports": {
+            "@google/generative-ai": "https://esm.run/@google/generative-ai"
+          }
+        }
+    </script>
+
+   <script type="module">
+    import { GoogleGenerativeAI } from "@google/generative-ai";
+
+    const API_KEY = "AIzaSyD_x2rRGfXzxgpjBchCOEebQ62eAYRT8yg"; 
+    const genAI = new GoogleGenerativeAI(API_KEY);
+
+    // Use "gemini-1.5-flash-latest" or "models/gemini-1.5-flash"
+    const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        apiVersion: 'v1' // Forcing the stable v1 instead of v1beta
+    });
+
+    const chatWindow = document.getElementById('chat-window');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    const chat = model.startChat({
+        history: [
+            {
+                role: "user",
+                parts: [{ text: "You are AlertX, an emergency AI. Give short, life-saving advice." }],
+            },
+            {
+                role: "model",
+                parts: [{ text: "AlertX Online. Standing by." }],
+            },
+        ],
+    });
+
+    async function handleChat() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        appendMessage('Me', text, 'user');
+        userInput.value = '';
+
+        const loadingId = appendMessage('AI', 'Connecting to satellite...', 'bot', true);
+
+        try {
+            const result = await chat.sendMessage(text);
+            const response = await result.response;
+            const botText = response.text();
+            updateMessage(loadingId, botText);
+        } catch (error) {
+            // This logs the SPECIFIC error to your console (F12)
+            console.error("Gemini Error:", error);
+            updateMessage(loadingId, `Connection Error: ${error.message}. Check console for details.`);
+        }
+    }
+
+    // ... (Keep your existing appendMessage and updateMessage functions)
+
+        function appendMessage(sender, text, type, isLoading = false) {
+            const id = Date.now();
+            const isBot = type === 'bot';
+            const msgHtml = `
+                <div class="flex gap-4 ${!isBot ? 'justify-end' : ''}" id="msg-${id}">
+                    ${isBot ? '<div class="w-10 h-10 bg-red-600 rounded-xl flex-shrink-0 flex items-center justify-center font-bold">AI</div>' : ''}
+                    <div class="${isBot ? 'bg-white/5 border-white/5' : 'bg-red-600/20 border-red-600/20'} p-4 rounded-2xl max-w-[80%] border text-sm leading-relaxed">
+                        ${text}
+                    </div>
+                    ${!isBot ? '<div class="w-10 h-10 bg-gray-700 rounded-xl flex-shrink-0 flex items-center justify-center font-bold">Me</div>' : ''}
+                </div>
+            `;
+            chatWindow.insertAdjacentHTML('beforeend', msgHtml);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return id;
+        }
+
+        function updateMessage(id, text) {
+            const msgDiv = document.querySelector(`#msg-${id} div:nth-child(${id ? '2' : '1'})`);
+            if (msgDiv) {
+                // simple formatting for bullet points from AI
+                msgDiv.innerHTML = text.replace(/\*/g, '•').replace(/\n/g, '<br>');
+            }
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        sendBtn.addEventListener('click', handleChat);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChat(); });
+        
+        // Theme Loader
+        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
+    </script>
+</body>
+</html>
