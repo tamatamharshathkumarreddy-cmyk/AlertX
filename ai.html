@@ -89,89 +89,144 @@
         }
     </script>
 
-   <script type="module">
-    import { GoogleGenerativeAI } from "@google/generative-ai";
+ <script>
+const API_KEY = "AIzaSyAdSCXNAYXJRFz6vwj8BxKTdfz2BRPSMn8"; // 🔥 replace with your real key
 
-    const API_KEY = "AIzaSyD_x2rRGfXzxgpjBchCOEebQ62eAYRT8yg"; 
-    const genAI = new GoogleGenerativeAI(API_KEY);
+const chatWindow = document.getElementById('chat-window');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
 
-    // Use "gemini-1.5-flash-latest" or "models/gemini-1.5-flash"
-    const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        apiVersion: 'v1' // Forcing the stable v1 instead of v1beta
-    });
+// ================= SEND MESSAGE =================
+async function handleChat() {
+    const text = userInput.value.trim();
+    if (!text) return;
 
-    const chatWindow = document.getElementById('chat-window');
-    const userInput = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
+    appendMessage('Me', text, 'user');
+    userInput.value = '';
 
-    const chat = model.startChat({
-        history: [
+    const loadingId = appendMessage('AI', 'Analyzing situation...', 'bot', true);
+
+    try {
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
             {
-                role: "user",
-                parts: [{ text: "You are AlertX, an emergency AI. Give short, life-saving advice." }],
-            },
-            {
-                role: "model",
-                parts: [{ text: "AlertX Online. Standing by." }],
-            },
-        ],
-    });
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: `
+You are AlertX, a life-saving emergency AI.
 
-    async function handleChat() {
-        const text = userInput.value.trim();
-        if (!text) return;
+Rules:
+- ALWAYS respond
+- Keep answers SHORT
+- Give only important steps
 
-        appendMessage('Me', text, 'user');
-        userInput.value = '';
+Format:
+🚨 Type: Fire / Medical / Security / Other
 
-        const loadingId = appendMessage('AI', 'Connecting to satellite...', 'bot', true);
+⚡ Immediate Steps:
+- Step 1
+- Step 2
+- Step 3
 
-        try {
-            const result = await chat.sendMessage(text);
-            const response = await result.response;
-            const botText = response.text();
-            updateMessage(loadingId, botText);
-        } catch (error) {
-            // This logs the SPECIFIC error to your console (F12)
-            console.error("Gemini Error:", error);
-            updateMessage(loadingId, `Connection Error: ${error.message}. Check console for details.`);
-        }
-    }
-
-    // ... (Keep your existing appendMessage and updateMessage functions)
-
-        function appendMessage(sender, text, type, isLoading = false) {
-            const id = Date.now();
-            const isBot = type === 'bot';
-            const msgHtml = `
-                <div class="flex gap-4 ${!isBot ? 'justify-end' : ''}" id="msg-${id}">
-                    ${isBot ? '<div class="w-10 h-10 bg-red-600 rounded-xl flex-shrink-0 flex items-center justify-center font-bold">AI</div>' : ''}
-                    <div class="${isBot ? 'bg-white/5 border-white/5' : 'bg-red-600/20 border-red-600/20'} p-4 rounded-2xl max-w-[80%] border text-sm leading-relaxed">
-                        ${text}
-                    </div>
-                    ${!isBot ? '<div class="w-10 h-10 bg-gray-700 rounded-xl flex-shrink-0 flex items-center justify-center font-bold">Me</div>' : ''}
-                </div>
-            `;
-            chatWindow.insertAdjacentHTML('beforeend', msgHtml);
-            chatWindow.scrollTop = chatWindow.scrollHeight;
-            return id;
-        }
-
-        function updateMessage(id, text) {
-            const msgDiv = document.querySelector(`#msg-${id} div:nth-child(${id ? '2' : '1'})`);
-            if (msgDiv) {
-                // simple formatting for bullet points from AI
-                msgDiv.innerHTML = text.replace(/\*/g, '•').replace(/\n/g, '<br>');
+User: ${text}
+`
+                                }
+                            ]
+                        }
+                    ]
+                })
             }
-            chatWindow.scrollTop = chatWindow.scrollHeight;
+        );
+
+        const data = await res.json();
+        console.log("API RESPONSE:", data);
+
+        // ================= SAFE RESPONSE PARSER =================
+        let botText = "⚠️ Unable to analyze. Please call emergency services.";
+
+        if (data.candidates && data.candidates.length > 0) {
+            const parts = data.candidates[0].content.parts;
+
+            if (parts && parts.length > 0) {
+                botText = parts.map(p => p.text).join("");
+            }
         }
 
-        sendBtn.addEventListener('click', handleChat);
-        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleChat(); });
-        
-        // Theme Loader
-        if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
-    </script>
+        // ================= FALLBACK AUTO-DETECTION =================
+        const lower = text.toLowerCase();
+        let detected = "Other";
+
+        if (lower.includes("fire") || lower.includes("smoke") || lower.includes("burn")) {
+            detected = "Fire 🔥";
+        } 
+        else if (lower.includes("injury") || lower.includes("bleeding") || lower.includes("faint") || lower.includes("pain")) {
+            detected = "Medical 🚑";
+        } 
+        else if (lower.includes("fight") || lower.includes("theft") || lower.includes("attack") || lower.includes("suspicious")) {
+            detected = "Security 🛡️";
+        }
+
+        if (!botText.includes("Type:")) {
+            botText = `🚨 Type: ${detected}\n\n` + botText;
+        }
+
+        updateMessage(loadingId, botText);
+
+    } catch (error) {
+        console.error("API Error:", error);
+        updateMessage(loadingId, `❌ Connection Error: ${error.message}`);
+    }
+}
+
+// ================= UI FUNCTIONS =================
+function appendMessage(sender, text, type, isLoading = false) {
+    const id = Date.now();
+    const isBot = type === 'bot';
+
+    const msgHtml = `
+        <div class="flex gap-4 ${!isBot ? 'justify-end' : ''}" id="msg-${id}">
+            ${isBot ? '<div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center font-bold">AI</div>' : ''}
+            <div class="${isBot ? 'bg-white/5 border-white/5' : 'bg-red-600/20 border-red-600/20'} p-4 rounded-2xl max-w-[80%] border text-sm leading-relaxed">
+                ${text}
+            </div>
+            ${!isBot ? '<div class="w-10 h-10 bg-gray-700 rounded-xl flex items-center justify-center font-bold">Me</div>' : ''}
+        </div>
+    `;
+
+    chatWindow.insertAdjacentHTML('beforeend', msgHtml);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    return id;
+}
+
+function updateMessage(id, text) {
+    const msgDiv = document.querySelector(`#msg-${id} div:nth-child(2)`);
+    if (msgDiv) {
+        msgDiv.innerHTML = text
+            .replace(/\*/g, '•')
+            .replace(/\n/g, '<br>');
+    }
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+// ================= EVENTS =================
+sendBtn.addEventListener('click', handleChat);
+
+userInput.addEventListener('keypress', (e) => { 
+    if (e.key === 'Enter') handleChat(); 
+});
+
+// ================= THEME =================
+if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light-theme');
+}
+</script>
 </body>
 </html>
